@@ -46,7 +46,13 @@ stopservice() {
     echo "$1 status: $(systemctl is-active $1)"
 }
 
+# Variables for env.sh
+    # NOIPUSERNAME
+    # NOIPPASSWORD
+    # NOIPHOSTNAME # comma-separated
+
 command-input() {
+    source $script_dir/env.sh
     clear
     echo "Welcome to Calebh101 Server Controller"
     echo "servercontroller $ver ($verS)"
@@ -94,7 +100,7 @@ command-input() {
                 ;;
             IP)
                 echo "Starting noip-duc..."
-                gnome-terminal --tab -- bash -c 'noip-duc; exec bash'
+                gnome-terminal --tab -- bash -c "noip-duc --username $NOIPUSERNAME --password $NOIPPASSWORD --hostnames $NOIPHOSTNAME ; exec bash"
                 echo "Started noip-duc"
                 ;;
             *)
