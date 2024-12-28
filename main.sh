@@ -17,7 +17,7 @@ quit() {
 }
 
 help() {
-    echo -e "Command\tAction\n1\tStart nginx\n2\tStart database server\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nB\tBackup data\n\n0\tQuit" | column -t -s $'\t'
+    echo -e "Command\tAction\n1\tStart nginx\n2\tStart database server\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nIP\tStart noip-duc\nB\tBackup data\n0\tQuit" | column -t -s $'\t'
 }
 
 killnodes() {
