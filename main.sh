@@ -3,6 +3,7 @@
 ver=0.0.0
 verS=0.0.0A
 
+script_dir=$(dirname "$(realpath "$0")")
 declare -a PIDS
 
 catch() {
@@ -46,6 +47,7 @@ stopservice() {
 }
 
 command-input() {
+    clear
     echo "Welcome to Calebh101 Server Controller"
     echo "servercontroller $ver ($verS)"
     echo ""
@@ -54,6 +56,8 @@ command-input() {
     read -p "Select an option: >> " user_input
     clear
     echo "Selected option: $user_input"
+    echo "Starting process..."
+    echo ""
 
     if [ -z "$user_input" ]; then
         quit
@@ -84,19 +88,23 @@ command-input() {
                 echo "Nodes are unsupported for killing individually. Please use XN to kill all nodes."
                 ;;
             B)
-                echo "Launching backup script..."
-                script_dir=$(dirname "$(realpath "$0")")
-                gnome-terminal --tab -- bash -c "$script_dir/backup.sh; exec bash"
-                echo "Launched backup script"
+                echo "Launching backup session..."
+                $script_dir/backup.sh
+                echo "Ended backup session"
+                ;;
+            IP)
+                echo "Starting noip-duc..."
+                gnome-terminal --tab -- bash -c 'noip-duc; exec bash'
+                echo "Started noip-duc"
                 ;;
             *)
                 echo "Invalid command: $user_input"
                 ;;
         esac
         echo ""
+        read -p "Process complete. Press enter to continue... "
         command-input
     fi
 }
 
-clear
 command-input
