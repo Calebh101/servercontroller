@@ -1,10 +1,19 @@
 #!/bin/bash
+echo "Starting..."
+DEBUG=1 # Loads debug.sh addons
 
 ver=0.0.0
 verS=0.0.0A
 
 script_dir=$(dirname "$(realpath "$0")")
 declare -a PIDS
+
+echo "Detecting environment..."
+if [ -n "$GNOME_TERMINAL_SCREEN" ]; then
+    terminal="gnome-terminal"
+else
+    terminal=$TERM_PROGRAM
+fi
 
 catch() {
     echo "An error occured"
@@ -17,11 +26,46 @@ quit() {
 }
 
 help() {
-    echo -e "Command\tAction\n1\tStart nginx\n2\tStart node.js server\nD\tSelect Discord bot to starts\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nIP\tStart noip-duc\nB\tBackup data\nS\tShow status\n0\tQuit" | column -t -s $'\t'
+    builtin echo -e "Command\tAction\n1\tStart nginx\n2\tStart node.js server\nD\tSelect Discord bot to starts\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nIP\tStart noip-duc\nB\tBackup data\nS\tShow status\n0\tQuit" | column -t -s $'\t'
+}
+
+pause() {
+    message="Press enter to continue..."
+    if [ $# -eq 0 ]; then
+        arg=""
+    else
+        arg="$1 "
+    fi
+    printf "${arg}${message} "
+    read
+}
+
+gnome-tab() {
+    echo "Detecting gnome-terminal..."
+    trap 'fallbackcommand "$1"' ERR
+    if [[ "$terminal" == "gnome-terminal" ]]; then
+        echo "Launching new tab of gnome-terminal..."
+        gnome-terminal --tab -- bash -c "$1; exec bash"
+    else
+        echo "Error: Current terminal environment is not gnome-terminal"
+        if command -v gnome-terminal &> /dev/null; then
+            echo "Launching new window of gnome-terminal..."
+            gnome-terminal -- bash -c "$1; exec bash"
+        else
+            echo "Error: Unable to launch gnome-terminal"
+            fallbackcommand "$1"
+        fi
+    fi
 }
 
 nodestatus() {
-    ps -eo pid,command | grep -E '^[[:space:]]*[0-9]+[[:space:]]+node' | awk '{print $1, $2, $3}'
+    output=$(ps -eo pid,command | grep -E '^[[:space:]]*[0-9]+[[:space:]]+node' | awk '{print $1, $2, $3}')
+
+    if [ -n "$output" ]; then
+        echo $output
+    else
+        echo "No nodes running."
+    fi
 }
 
 killnodes() {
@@ -34,6 +78,12 @@ killservices() {
     echo "Stopping systemctl services..."
     stopservice "nginx"
     echo "Stopped systemctl services"
+}
+
+fallbackcommand () {
+    echo "Unable to run command via expected route"
+    echo "Running command directly..."
+    $1
 }
 
 showservice() {
@@ -54,13 +104,23 @@ stopservice() {
     echo "$1 status: $(systemctl is-active $1)"
 }
 
+startnode () {
+    echo "Setting up node..."
+    file="$1"
+    dir=$(dirname "$file")
+    echo "Starting node $file..."
+    gnome-tab "echo \"Starting node: $file\" && echo "" && cd \"$dir\" && node \"$file\""
+}
+
 discord-input() {
+    echo "Finding directories..."
+    directories=($(find "$DISCORD_DIR" -mindepth 1 -maxdepth 1 -type d))
     clear
+
     echo "Welcome to Calebh101 Discord Bot Controller"
-    echo "servercontroller > D $ver ($verS)"
+    echo "servercontroller:D $ver ($verS)"
     echo ""
 
-    directories=($(find "$DISCORD_DIR" -mindepth 1 -maxdepth 1 -type d))
     file="bot.js"
     output="Command\tAction"
 
@@ -80,7 +140,7 @@ discord-input() {
     output+=$'\n'"S\tShow node status"
     output+=$'\n'"C\tExit"
 
-    echo -e "$output" | column -t -s $'\t'
+    builtin echo -e "$output" | column -t -s $'\t'
     echo ""
 
     echo -n "Select an option: >> "
@@ -89,12 +149,11 @@ discord-input() {
 
     # Validate the choice (check if it's a number and within range)
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#directories[@]} ]; then
+        echo "Starting process..."
         dir="${directories[$((choice - 1))]}"
         filePath="$dir/$file"
-        echo ""
         echo "Selected option: $dir"
-        echo "Starting node: $filePath"
-        gnome-terminal --tab -- bash -c "node $filePath; exec bash"
+        startnode "$filePath"
     elif [[ "$choice" == "S" ]]; then
         nodestatus
     elif [[ "$choice" == "X" ]]; then
@@ -106,13 +165,15 @@ discord-input() {
         echo "Invalid selection: $choice."
     fi
     echo ""
-    read -p "Subprocess complete. Press enter to continue... "
+    pause "Subprocess complete."
     discord-input
 }
 
 command-input() {
+    echo "Getting environmental variables..."
     source $script_dir/env.sh        # private variables
     source $script_dir/public.env.sh # public configuration
+    echo "Loading..."
     clear
     echo "Welcome to Calebh101 Server Controller"
     echo "servercontroller $ver ($verS)"
@@ -129,7 +190,7 @@ command-input() {
         quit
     else
         case "$user_input" in
-            0)
+            0|exit|quit|stop|EXIT|QUIT|STOP)
                 quit
                 ;;
             1)
@@ -139,7 +200,7 @@ command-input() {
                 stopservice "nginx"
                 ;;
             2)
-                gnome-terminal --tab -- bash -c "node $NODE_DIR/server.js; exec bash"
+                startnode "$NODE_DIR/server.js"
                 ;;
             D)
                 discord-input
@@ -175,7 +236,7 @@ command-input() {
                 ;;
             IP)
                 echo "Starting noip-duc..."
-                gnome-terminal --tab -- bash -c "noip-duc --username $NOIPUSERNAME --password $NOIPPASSWORD --hostnames $NOIPHOSTNAME; exec bash"
+                gnome-tab "noip-duc --username $NOIPUSERNAME --password $NOIPPASSWORD --hostnames $NOIPHOSTNAME"
                 echo "Started noip-duc"
                 ;;
             *)
@@ -183,9 +244,17 @@ command-input() {
                 ;;
         esac
         echo ""
-        read -p "Process complete. Press enter to continue... "
+        pause "Process complete."
         command-input
     fi
 }
 
+if [ "$DEBUG" -gt 0 ]; then
+    echo "Loading debug mode additions..."
+    source $script_dir/debug.sh
+fi
+
+echo "Loading..."
+echo "script_dir: $script_dir"
+echo "terminal: $terminal"
 command-input

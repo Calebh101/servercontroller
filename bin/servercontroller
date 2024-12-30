@@ -1,5 +1,9 @@
 #!/bin/bash
+echo "Loading..."
+echo "Getting directories..."
 
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+
+echo "Running main script..."
 "$PARENT_DIR/main.sh"
