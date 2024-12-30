@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "Starting..."
-DEBUG=1 # Loads debug.sh addons
+DEBUG=0 # Loads debug.sh addons
 
 ver=0.0.0
 verS=0.0.0A
