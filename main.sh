@@ -17,7 +17,11 @@ quit() {
 }
 
 help() {
-    echo -e "Command\tAction\n1\tStart nginx\n2\tStart node.js server\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nIP\tStart noip-duc\nB\tBackup data\nS\tShow status\n0\tQuit" | column -t -s $'\t'
+    echo -e "Command\tAction\n1\tStart nginx\n2\tStart node.js server\nD\tSelect Discord bot to starts\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nIP\tStart noip-duc\nB\tBackup data\nS\tShow status\n0\tQuit" | column -t -s $'\t'
+}
+
+nodestatus() {
+    ps -eo pid,command | grep -E '^[[:space:]]*[0-9]+[[:space:]]+node' | awk '{print $1, $2, $3}'
 }
 
 killnodes() {
@@ -50,13 +54,65 @@ stopservice() {
     echo "$1 status: $(systemctl is-active $1)"
 }
 
-# Variables for env.sh
-    # NOIPUSERNAME
-    # NOIPPASSWORD
-    # NOIPHOSTNAME # comma-separated
+discord-input() {
+    clear
+    echo "Welcome to Calebh101 Discord Bot Controller"
+    echo "servercontroller > D $ver ($verS)"
+    echo ""
+
+    directories=($(find "$DISCORD_DIR" -mindepth 1 -maxdepth 1 -type d))
+    file="bot.js"
+    output="Command\tAction"
+
+    # Check if there are any directories
+    if [ ${#directories[@]} -eq 0 ]; then
+        echo "Error: No Discord bot directories found"
+        break
+    fi
+
+    # Add directory options to the output string
+    for i in "${!directories[@]}"; do
+        output+=$'\n'"$((i + 1))\t${directories[$i]}/$file"
+    done
+
+    # Add special options (X, C) to the output string
+    output+=$'\n'"X\tKill all nodes"
+    output+=$'\n'"S\tShow node status"
+    output+=$'\n'"C\tExit"
+
+    echo -e "$output" | column -t -s $'\t'
+    echo ""
+
+    echo -n "Select an option: >> "
+    read -r choice
+    echo ""
+
+    # Validate the choice (check if it's a number and within range)
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#directories[@]} ]; then
+        dir="${directories[$((choice - 1))]}"
+        filePath="$dir/$file"
+        echo ""
+        echo "Selected option: $dir"
+        echo "Starting node: $filePath"
+        gnome-terminal --tab -- bash -c "node $filePath; exec bash"
+    elif [[ "$choice" == "S" ]]; then
+        nodestatus
+    elif [[ "$choice" == "X" ]]; then
+        killnodes
+    elif [[ "$choice" == "C" ]]; then
+        command-input
+        exit
+    else
+        echo "Invalid selection: $choice."
+    fi
+    echo ""
+    read -p "Subprocess complete. Press enter to continue... "
+    discord-input
+}
 
 command-input() {
-    source $script_dir/env.sh
+    source $script_dir/env.sh        # private variables
+    source $script_dir/public.env.sh # public configuration
     clear
     echo "Welcome to Calebh101 Server Controller"
     echo "servercontroller $ver ($verS)"
@@ -83,10 +139,18 @@ command-input() {
                 stopservice "nginx"
                 ;;
             2)
-                gnome-terminal --tab -- bash -c 'node /var/www/node/server.js; exec bash'
+                gnome-terminal --tab -- bash -c "node $NODE_DIR/server.js; exec bash"
+                ;;
+            D)
+                discord-input
                 ;;
             X)
                 killservices
+                echo ""
+                killnodes
+                ;;
+            XN)
+                killnodes
                 ;;
             XS)
                 killservices
@@ -107,11 +171,11 @@ command-input() {
                 showservice "nginx"
                 echo ""
                 echo "Showing nodes status..."
-                ps -eo pid,command | grep -E '^[[:space:]]*[0-9]+[[:space:]]+node' | awk '{print $1, $2, $3}'
+                nodestatus
                 ;;
             IP)
                 echo "Starting noip-duc..."
-                gnome-terminal --tab -- bash -c "noip-duc --username $NOIPUSERNAME --password $NOIPPASSWORD --hostnames $NOIPHOSTNAME ; exec bash"
+                gnome-terminal --tab -- bash -c "noip-duc --username $NOIPUSERNAME --password $NOIPPASSWORD --hostnames $NOIPHOSTNAME; exec bash"
                 echo "Started noip-duc"
                 ;;
             *)
