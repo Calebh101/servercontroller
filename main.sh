@@ -17,7 +17,7 @@ quit() {
 }
 
 help() {
-    echo -e "Command\tAction\n1\tStart nginx\n2\tStart database server\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nIP\tStart noip-duc\nB\tBackup data\n0\tQuit" | column -t -s $'\t'
+    echo -e "Command\tAction\n1\tStart nginx\n2\tStart node.js server\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nIP\tStart noip-duc\nB\tBackup data\nS\tShow status\n0\tQuit" | column -t -s $'\t'
 }
 
 killnodes() {
@@ -30,6 +30,10 @@ killservices() {
     echo "Stopping systemctl services..."
     stopservice "nginx"
     echo "Stopped systemctl services"
+}
+
+showservice() {
+    echo "$1 status: $(systemctl is-active $1)"
 }
 
 startservice() {
@@ -79,7 +83,7 @@ command-input() {
                 stopservice "nginx"
                 ;;
             2)
-                gnome-terminal --tab -- bash -c 'node /var/www/db/test/server.js; exec bash'
+                gnome-terminal --tab -- bash -c 'node /var/www/node/server.js; exec bash'
                 ;;
             X)
                 killservices
@@ -97,6 +101,13 @@ command-input() {
                 echo "Launching backup session..."
                 $script_dir/backup.sh
                 echo "Ended backup session"
+                ;;
+            S)
+                echo "Showing systemctl status..."
+                showservice "nginx"
+                echo ""
+                echo "Showing nodes status..."
+                ps -eo pid,command | grep -E '^[[:space:]]*[0-9]+[[:space:]]+node' | awk '{print $1, $2, $3}'
                 ;;
             IP)
                 echo "Starting noip-duc..."
