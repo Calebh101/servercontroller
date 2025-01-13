@@ -1,17 +1,21 @@
-echo "Starting backup of files..."
-echo "Copying files..."
+#!/bin/bash
+echo "Starting backup utility..."
+
+dir=/backup
+date=$(date '+%Y-%m-%d %H:%M:%S')
+
 cd /backup
+echo "Starting backup of files..."
 
-mkdir -p ./discord/SuggestionsPlus/
-cp /var/www/discord/SuggestionsPlus/data.json ./discord/SuggestionsPlus/data.json
+echo "Copying data..."
+mkdir -p "./data/node" && cp -r "/var/www/node/data" "$_"
+mkdir -p "./data/discord/SuggestionsPlus" && cp "/var/www/discord/SuggestionsPlus/data.json" "$_/data.json"
 
-cp -r /var/www/node/data ./node
+echo "Dumping databases..."
+mongodump --out ./db
 
-echo "Uploading backup..."
-git branch -m main
-git add .
-git commit -m "Daily backup: $(date '+%Y-%m-%d %H:%M:%S')"
-git push origin main
-echo "Cleaning up..."
-sudo rm -r ./*
+echo "Creating ZIP file..."
+zip -r backup.zip .
+
 echo "Backup complete"
+echo "Results: $(ls --color=auto -m)"
