@@ -206,7 +206,7 @@ command-input() {
             3)
                 startservice "mongod"
                 ;;
-            3X)
+            X3)
                 stopservice "mongod"
                 ;;
             D)
