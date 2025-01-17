@@ -26,7 +26,7 @@ quit() {
 }
 
 help() {
-    builtin echo -e "Command\tAction\n1\tStart nginx\n2\tStart node.js server\nD\tSelect Discord bot to starts\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nIP\tStart noip-duc\nB\tBackup data\nS\tShow status\n0\tQuit" | column -t -s $'\t'
+    builtin echo -e "Command\tAction\n1\tStart nginx\n2\tStart node.js server\n3\tStart mongod\nD\tSelect Discord bot to starts\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nIP\tStart noip-duc\nB\tBackup data\nS\tShow status\n0\tQuit" | column -t -s $'\t'
 }
 
 pause() {
@@ -77,6 +77,7 @@ killnodes() {
 killservices() {
     echo "Stopping systemctl services..."
     stopservice "nginx"
+    stopservice "mongod"
     echo "Stopped systemctl services"
 }
 
@@ -201,6 +202,12 @@ command-input() {
                 ;;
             2)
                 startnode "$NODE_DIR/server.js"
+                ;;
+            3)
+                startservice "mongod"
+                ;;
+            3X)
+                stopservice "mongod"
                 ;;
             D)
                 discord-input
