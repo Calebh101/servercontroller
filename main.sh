@@ -237,6 +237,7 @@ command-input() {
             S)
                 echo "Showing systemctl status..."
                 showservice "nginx"
+                showservice "mongod"
                 echo ""
                 echo "Showing nodes status..."
                 nodestatus
