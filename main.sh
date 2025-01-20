@@ -1,32 +1,19 @@
 #!/bin/bash
 echo "Starting..."
-DEBUG=0 # Loads debug.sh addons
 
-ver=0.0.0
-verS=0.0.0A
-
-script_dir=$(dirname "$(realpath "$0")")
-declare -a PIDS
-
-echo "Detecting environment..."
-if [ -n "$GNOME_TERMINAL_SCREEN" ]; then
-    terminal="gnome-terminal"
-else
-    terminal=$TERM_PROGRAM
-fi
-
-catch() {
-    echo "An error occured"
-    exit -1
-}
+DEBUG=0
+debugString=disabled
 
 quit() {
+    status=0
     echo "Exiting Server Controller..."
-    exit 0
+    exit $status
 }
 
-help() {
-    builtin echo -e "Command\tAction\n1\tStart nginx\n2\tStart node.js server\n3\tStart mongod\nD\tSelect Discord bot to starts\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\nX#\tKill specific server\nIP\tStart noip-duc\nB\tBackup data\nS\tShow status\n0\tQuit" | column -t -s $'\t'
+catch() {
+    status=-1
+    echo "Exiting on critical error... (status code: $status)"
+    exit $status
 }
 
 pause() {
@@ -38,6 +25,38 @@ pause() {
     fi
     printf "${arg}${message} "
     read
+}
+
+echo "Scanning options..."
+while getopts ":d" opt; do
+    case $opt in
+        d)
+            DEBUG=1
+            debugString=enabled
+            echo "Debug mode enabled"
+            ;;
+        \?)
+            pause "WARNING: Invalid option provided: -$OPTARG:"
+            catch
+            ;;
+    esac
+done
+
+ver=0.1.0
+verS=0.1.0A
+
+script_dir=$(dirname "$(realpath "$0")")
+declare -a PIDS
+
+echo "Detecting environment..."
+if [ -n "$GNOME_TERMINAL_SCREEN" ]; then
+    terminal="gnome-terminal"
+else
+    terminal=$TERM_PROGRAM
+fi
+
+help() {
+    builtin echo -e "Command\tAction\n1\tStart nginx\n2\tStart node.js server\n3\tStart mongod\nD\tSelect Discord bot to start\nX\tKill all servers and nodes\nXN\tKill all nodes\nXS\tKill all servers\n\nR#\tRestart specific service\nX#\tKill specific service\nS\tShow status\nB\tBackup\nIP\tStart noip-duc\n0\tQuit" | column -t -s $'\t'
 }
 
 gnome-tab() {
@@ -59,18 +78,15 @@ gnome-tab() {
 }
 
 nodestatus() {
-    output=$(ps -eo pid,command | grep -E '^[[:space:]]*[0-9]+[[:space:]]+node' | awk '{print $1, $2, $3}')
-
-    if [ -n "$output" ]; then
-        echo $output
-    else
-        echo "No nodes running."
-    fi
+    echo "Showing node status..."
+    requirecommand "pm2"
+    pm2 list
 }
 
 killnodes() {
+    requirecommand "pm2"
     echo "Killing nodes..."
-    sudo pkill node
+    pm2 kill all
     echo "Killed nodes"
 }
 
@@ -88,29 +104,50 @@ fallbackcommand () {
 }
 
 showservice() {
-    echo "$1 status: $(systemctl is-active $1)"
+    name=$1
+    echo "Service $name status: $(systemctl is-active $name)"
+}
+
+shownode() {
+    requirecommand "pm2"
+    name=$1
+    echo "Node $name status:"
+    pm2 jlist | jq --arg name "$name" '.[] | select(.name==$name) | .pm2_env.status'
+}
+
+requirecommand() {
+    command=$1
+    if command -v $command &> /dev/null; then
+        echo "Command available: $command"
+    else
+        pause "WARNING: command $command is required to use this command"
+        catch
+    fi
 }
 
 startservice() {
-    echo "Starting $1..."
-    sudo systemctl start $1
-    echo "Started $1"
-    echo "$1 status: $(systemctl is-active $1)"
+    name=$1
+    echo "Starting service $name..."
+    sudo systemctl start $name
+    echo "Started $name"
+    showservice $name
 }
 
 stopservice() {
-    echo "Stopping $1..."
-    sudo systemctl stop $1
-    echo "Stopped $1"
-    echo "$1 status: $(systemctl is-active $1)"
+    name=$1
+    echo "Stopping service $name..."
+    sudo systemctl stop $name
+    echo "Stopped $name"
+    showservice $name
 }
 
 startnode () {
+    requirecommand "pm2"
     echo "Setting up node..."
     file="$1"
     dir=$(dirname "$file")
     echo "Starting node $file..."
-    gnome-tab "echo \"Starting node: $file\" && echo "" && cd \"$dir\" && node \"$file\""
+    pm2 start "$NODE_DIR/$file.js" -i max
 }
 
 discord-input() {
@@ -125,18 +162,15 @@ discord-input() {
     file="bot.js"
     output="Command\tAction"
 
-    # Check if there are any directories
     if [ ${#directories[@]} -eq 0 ]; then
         echo "Error: No Discord bot directories found"
         break
     fi
 
-    # Add directory options to the output string
     for i in "${!directories[@]}"; do
         output+=$'\n'"$((i + 1))\t${directories[$i]}/$file"
     done
 
-    # Add special options (X, C) to the output string
     output+=$'\n'"X\tKill all nodes"
     output+=$'\n'"S\tShow node status"
     output+=$'\n'"C\tExit"
@@ -148,7 +182,6 @@ discord-input() {
     read -r choice
     echo ""
 
-    # Validate the choice (check if it's a number and within range)
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#directories[@]} ]; then
         echo "Starting process..."
         dir="${directories[$((choice - 1))]}"
@@ -170,14 +203,63 @@ discord-input() {
     discord-input
 }
 
+restartnode() {
+    requirecommand "pm2"
+    name=$1
+    echo "Restarting node $name..."
+    pm2 restart $name
+    echo "Restarted node"
+}
+
+restartservice() {
+    name=$1
+    echo "Restarting service $name..."
+    sudo systemctl restart "$name"
+    echo "Restarted service"
+    showservice $name
+}
+
+stopnode() {
+    requirecommand "pm2"
+    name=$1
+    echo "Stopping node $name..."
+    pm2 stop $name
+    echo "Stopped node"
+}
+
 command-input() {
+    echo "Running pre-flight checks..."
+    if [ "$EUID" -eq 0 ]; then
+        pause "WARNING! Please do not run this program as root, as this could cause unintended consequences! Processes that require sudo will ask for sudo  separately."
+        catch
+    else
+        echo "Check passed: root user"
+    fi
+
+    if [ -s "public.env.sh" ]; then
+        pause "WARNING! public.env.sh detected! Using public.env.sh has been deprecated since version 0.1.0 (0.1.0A). Please move all configurations from public.env.sh to env.sh and remove public.env.sh."
+    else
+        echo "Check passed: public.env.sh"
+    fi
+
+    if [ -s "env.sh" ]; then
+        echo "Check passed: env.sh"
+    else
+        desc="env.sh not found! env.sh is required to run this program!"
+        if [ -s "default.env.sh" ]; then
+            pause "WARNING! $desc Please edit default.env.sh for your configuration, then rename it to \"env.sh\"."
+        else
+            pause "WARNING! $desc Please make sure the file name is \"env.sh\" and it is found in the source directory."
+        fi
+        catch
+    fi
+
     echo "Getting environmental variables..."
-    source $script_dir/env.sh        # private variables
-    source $script_dir/public.env.sh # public configuration
+    source $script_dir/env.sh
     echo "Loading..."
     clear
     echo "Welcome to Calebh101 Server Controller"
-    echo "servercontroller $ver ($verS)"
+    echo "servercontroller $ver ($verS) (debug mode: $debugString)"
     echo ""
     help
     echo ""
@@ -200,14 +282,26 @@ command-input() {
             X1)
                 stopservice "nginx"
                 ;;
+            R1)
+                restartservice "nginx"
+                ;;
             2)
                 startnode "$NODE_DIR/server.js"
+                ;;
+            X2)
+                stopnode "server"
+                ;;
+            R2)
+                restartnode "server"
                 ;;
             3)
                 startservice "mongod"
                 ;;
             X3)
                 stopservice "mongod"
+                ;;
+            R3)
+                restartservice "mongod"
                 ;;
             D)
                 discord-input
@@ -223,11 +317,8 @@ command-input() {
             XS)
                 killservices
                 ;;
-            X#)
-                echo "Please replace \"#\" with the number of the running server."
-                ;;
-            X2)
-                echo "Nodes are unsupported for killing individually. Please use XN to kill all nodes."
+            X#|R#)
+                echo "Please replace \"#\" with the number of the running service."
                 ;;
             B)
                 echo "Launching backup session..."
@@ -239,7 +330,6 @@ command-input() {
                 showservice "nginx"
                 showservice "mongod"
                 echo ""
-                echo "Showing nodes status..."
                 nodestatus
                 ;;
             IP)

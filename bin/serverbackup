@@ -6,4 +6,4 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo "Running called script..."
-"$PARENT_DIR/backup.sh"
+"$PARENT_DIR/backup.sh" "$@"

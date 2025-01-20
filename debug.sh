@@ -1,3 +1,4 @@
+#!/bin/bash
 # Debug addons, that when ran from "source debug.sh" from any script, will add some new debug features.
 
 echo "-- DEBUG MODE --"
@@ -21,7 +22,9 @@ clear () {
 }
 
 exit () {
-    echo "DEBUG: Script exit called"
+    status=$1
+    echo "DEBUG: Script exit called: $status"
+    exit $status
 }
 
 source () {
