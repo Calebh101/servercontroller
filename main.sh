@@ -5,7 +5,9 @@ ver=0.1.1
 verS=0.1.1B
 
 script_dir=$(dirname "$(realpath "$0")")
-declare -a PIDS
+DEBUG=0        # don't set manually here; instead, use servercontroller -d
+preventexit=0  # breaks some stuff, made it because why not
+autoran=0      # to log if an autorun service was called (to automatically exit the script after all autorun services are complete)
 
 echo "Detecting environment..."
 if [ -n "$GNOME_TERMINAL_SCREEN" ]; then
@@ -14,24 +16,41 @@ else
     terminal=$TERM_PROGRAM
 fi
 
-DEBUG=0
-debugString=disabled
-autoran=0
+catch() {
+    status=-1
+    echo "Exiting on critical error... (status code: $status)"
+    if [[ $preventexit -eq 0 ]]; then
+        exit $status
+    else
+        echo "Preventing exit (status code: $status)"
+    fi
+}
+
+pause() {
+    message="Press enter to continue..."
+    if [ $# -eq 0 ]; then
+        arg=""
+    else
+        arg="$1 "
+    fi
+    printf "${arg}${message} "
+    read
+}
 
 echo "Running pre-flight checks..."
 echo "Check deprecated: root user"
 
-if [ -s "public.env.sh" ]; then
+if [ -s "$script_dir/public.env.sh" ]; then
     pause "WARNING! public.env.sh detected! Using public.env.sh has been deprecated since version 0.1.0 (0.1.0A). Please move all configurations from public.env.sh to env.sh and remove public.env.sh."
 else
     echo "Check passed: public.env.sh"
 fi
 
-if [ -s "env.sh" ]; then
+if [ -s "$script_dir/env.sh" ]; then
     echo "Check passed: env.sh"
 else
     desc="env.sh not found! env.sh is required to run this program!"
-    if [ -s "default.env.sh" ]; then
+    if [ -s "$script_dir/default.env.sh" ]; then
         pause "WARNING! $desc Please edit default.env.sh for your configuration, then rename it to \"env.sh\"."
     else
         pause "WARNING! $desc Please make sure the file name is \"env.sh\" and it is found in the source directory."
@@ -45,24 +64,11 @@ source $script_dir/env.sh
 quit() {
     status=0
     echo "Exiting Server Controller..."
-    exit $status
-}
-
-catch() {
-    status=-1
-    echo "Exiting on critical error... (status code: $status)"
-    exit $status
-}
-
-pause() {
-    message="Press enter to continue..."
-    if [ $# -eq 0 ]; then
-        arg=""
+        if [[ $preventexit -eq 0 ]]; then
+        exit $status
     else
-        arg="$1 "
+        echo "Preventing exit (status code: $status)"
     fi
-    printf "${arg}${message} "
-    read
 }
 
 startservice() {
@@ -177,7 +183,6 @@ while getopts ":dbszx" opt; do
     case $opt in
         d)
             DEBUG=1
-            debugString=enabled
             echo "Debug mode enabled"
             ;;
         b)
@@ -326,7 +331,13 @@ command-input() {
     echo "Loading..."
     clear
     echo "Welcome to Calebh101 Server Controller"
-    echo "servercontroller $ver ($verS) (debug mode: $debugString)"
+    echo "servercontroller $ver ($verS)"
+    if [[ DEBUG -eq 1 ]]; then
+        echo "Running in debug mode"
+    fi
+    if [[ $EUID -eq 0 ]]; then
+        echo "Running as sudo"
+    fi
     echo ""
     help
     echo ""
