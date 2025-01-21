@@ -9,7 +9,7 @@ This program is designed to help me manage my server. Has many built-in tools fo
 - Initial release
 - Supports systemctl and node
 
-## 0.1.0
+## 0.1.0 (0.1.0A)
 
 - Added pre-flight checks
     - root user (warns the user if the program is being run as root user)
@@ -23,15 +23,20 @@ This program is designed to help me manage my server. Has many built-in tools fo
 - Debug addon improvements
 - Other small things
 
-## 0.1.1
+## 0.1.1 (0.1.0A)
 
 - New script options:
     - -b (auto option): automatically runs backup.sh without needing human interaction
     - -s (auto option): automatically starts all services and nodes without human interaction
     - -x (auto option): automatically kills all services and nodes without human interaction
     - -xs (auto option): automatically restarts all services and nodes without human interaction
-- Deprecating serverbackup (will not work after 0.1.1A)
+- Deprecated serverbackup (will not work after 0.1.1A)
 - Deprecated pre-flight check "root user"
+
+### 0.1.1B
+
+- Removed serverbackup (replaced with servercontroller -b)
+- Fixed bug affecting auto services
 
 ## Next Up
 

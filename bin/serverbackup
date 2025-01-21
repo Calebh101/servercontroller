@@ -1,5 +1,0 @@
-#!/bin/bash
-echo "Loading..."
-echo "WARNING: serverbackup has been deprecated. Use servercontroller -b instead. serverbackup will be removed after 0.1.1A."
-echo "Running servercontroller..."
-servercontroller -b

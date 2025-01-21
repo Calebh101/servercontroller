@@ -2,7 +2,7 @@
 echo "Starting..."
 
 ver=0.1.1
-verS=0.1.1A
+verS=0.1.1B
 
 script_dir=$(dirname "$(realpath "$0")")
 declare -a PIDS
@@ -16,7 +16,7 @@ fi
 
 DEBUG=0
 debugString=disabled
-aDiscordBot=0
+autoran=0
 
 echo "Running pre-flight checks..."
 echo "Check deprecated: root user"
@@ -181,18 +181,19 @@ while getopts ":dbszx" opt; do
             echo "Debug mode enabled"
             ;;
         b)
+            autoran=1
             echo "Auto service started: backup"
             backup
             echo "Auto service ended"
-            quit
             ;;
         s)
+            autoran=1
             echo "Auto service started: startall"
             startall
             echo "Auto service ended"
-            quit
             ;;
         x)
+            autoran=1
             echo "Auto service started: killall"
             killall
             echo "Auto service ended"
@@ -203,6 +204,11 @@ while getopts ":dbszx" opt; do
             ;;
     esac
 done
+
+if [ "$autoran" -eq 1 ]; then
+    echo "Ended auto services"
+    quit
+fi
 
 if [ "$DEBUG" -gt 0 ]; then
     echo "Loading debug mode additions..."
