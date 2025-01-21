@@ -1,15 +1,23 @@
 # What is this?
 
-This program is designed to help me manage my server. Has many built-in tools for doing so.
+This program is designed to help me manage my server. It has many built-in tools for doing so, including a DDNS update client, pm2, and systemctl. Includes Discord bot support.
+
+# Who is this for?
+
+Just me. You can use or remix it if you want but I specifically tailored it to me for my server management.
 
 # Changelog
 
 ## 0.0.0
 
+### 0.0.0A
+
 - Initial release
 - Supports systemctl and node
 
-## 0.1.0 (0.1.0A)
+## 0.1.0
+
+### 0.1.0A
 
 - Added pre-flight checks
     - root user (warns the user if the program is being run as root user)
@@ -23,7 +31,9 @@ This program is designed to help me manage my server. Has many built-in tools fo
 - Debug addon improvements
 - Other small things
 
-## 0.1.1 (0.1.0A)
+## 0.1.1
+
+### 0.1.1A
 
 - New script options:
     - -b (auto option): automatically runs backup.sh without needing human interaction
