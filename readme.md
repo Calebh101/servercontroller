@@ -23,9 +23,18 @@ This program is designed to help me manage my server. Has many built-in tools fo
 - Debug addon improvements
 - Other small things
 
+## 0.1.1
+
+- New script options:
+    - -b (auto option): automatically runs backup.sh without needing human interaction
+    - -s (auto option): automatically starts all services and nodes without human interaction
+    - -x (auto option): automatically kills all services and nodes without human interaction
+    - -xs (auto option): automatically restarts all services and nodes without human interaction
+- Deprecating serverbackup (will not work after 0.1.1A)
+- Deprecated pre-flight check "root user"
+
 ## Next Up
 
 Future goals:
 
-- A way to automatically run the script to do things like start services and back up via -a and others
 - A way to configure the script to automatically start everything at startup
