@@ -6,6 +6,38 @@ This program is designed to help me manage my server. It has many built-in tools
 
 Just me. You can use or remix it if you want but I specifically tailored it to me for my server management.
 
+# Usage
+
+## Setup
+
+Add \<path to servercontroller\>/bin to your path to be able to run it from anywhere.
+
+```bash
+echo '\nexport PATH="$PATH:<path to servercontroller>/bin"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Replace \<path to servercontroller\> with the path to where this is.
+
+## Usage
+
+(sudo) servercontroller [options]
+
+Examples:
+
+- sudo servercontroller -b
+- servercontroller -dbxs
+
+### Options
+
+Options to add to the command.
+
+- -d: debug mode
+- -b (auto option): automatically runs backup.sh without needing human interaction
+- -s (auto option): automatically starts all services and nodes without human interaction
+- -x (auto option): automatically kills all services and nodes without human interaction
+- -xs (auto option) (in this order): automatically restarts all services and nodes without human interaction
+
 # Changelog
 
 ## 0.0.0
